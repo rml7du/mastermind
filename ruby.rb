@@ -1,3 +1,10 @@
+class Array
+    def subtract_once(values) #used to count colors correct
+        counts = values.inject(Hash.new(0)) { |h, v| h[v] += 1; h }
+        reject { |e| counts[e] -= 1 unless counts[e].zero? }
+    end
+end
+
 class Board
 
     attr_reader :current_round, :array, :code_size 
@@ -8,22 +15,17 @@ class Board
         @num_rounds = num_rounds
         @current_round = 1
         @array = Array.new(@num_turns){Array.new(@code_size, "o")}
-        #@guess_array = Array.new(@num_turns){Array.new(@code_size, ".")}
-        #@array = Array.new(@num_turns)#{Array.new(@code_size, "b")}
     end
 
     def print_board()
         puts @array.map { |x| x.join(' ') }
-        #puts @guess_array.map { |x| x.join(' ') }
     end
 
     def human_play()
-        puts "Make your guess from the following colors (Red, Green, Blue, Yellow, Purple, Orange)"
-        puts "(type first letter of each guess. eg BBGR (Blue Blue Green Red)"
+        puts "Make your guess from the following colors (Red, Green, Blue, Yellow, Purple, Orange - type first letter of each guess"
         @array[@current_round-1] = gets.chomp.upcase.split("")
         @current_round += 1
     end
-
 end
 
 class GamePlay
@@ -33,7 +35,9 @@ class GamePlay
 end
 
 class ComputerPlay
+
     attr_reader :colors, :code
+
     def initialize(code_size)
         @colors = ["R", "G", "B", "Y", "P", "O"] #red, green, blue, yellow, purple, orange
         @code = create_code(code_size)
@@ -51,7 +55,7 @@ class ComputerPlay
     end
 
     def comp_evaluate(array)
-        colors_correct = @code_size - (@code - array).length
+        colors_correct = @code_size - @code.subtract_once(array).length
         correct_peg = 0
         i = 0
         @code.each do |x|
@@ -87,11 +91,11 @@ def play()
 
     board = Board.new(code_size, num_turns, num_rounds)
     comp = ComputerPlay.new(board.code_size)
-    
+
     i = 0
-    gameover = false
-    while i < num_turns && gameover == false
-        puts "#{comp.code} - this is the code to break"
+
+    while i < num_turns 
+        #puts "#{comp.code} - this is the code to break"
         board.human_play
         if comp.comp_evaluate(board.array[i])
             break
@@ -99,7 +103,7 @@ def play()
         board.print_board
         i+=1
         if i == num_turns 
-            puts "GAMEOVER - YOU LOSE!!"
+            puts "GAMEOVER - YOU LOSE!! #{comp.code} - this was the code to break"
         end
     end
 end
