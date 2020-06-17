@@ -1,6 +1,6 @@
 class Board
 
-    attr_reader :current_round, :array, :code_size
+    attr_reader :current_round, :array, :code_size 
     
     def initialize(code_size, num_turns, num_rounds)
         @code_size = code_size
@@ -21,7 +21,6 @@ class Board
         puts "Make your guess from the following colors (Red, Green, Blue, Yellow, Purple, Orange)"
         puts "(type first letter of each guess. eg BBGR (Blue Blue Green Red)"
         @array[@current_round-1] = gets.chomp.upcase.split("")
-        #@array[@current_round-1] += response_array
         @current_round += 1
     end
 
@@ -37,8 +36,18 @@ class ComputerPlay
     attr_reader :colors, :code
     def initialize(code_size)
         @colors = ["R", "G", "B", "Y", "P", "O"] #red, green, blue, yellow, purple, orange
-        @code = [@colors.sample, @colors.sample, @colors.sample, @colors.sample]
+        @code = create_code(code_size)
         @code_size = code_size
+    end
+
+    def create_code(code_size)
+        i=0
+        code_creater = []
+        until i == code_size
+            code_creater.push("#{@colors.sample}")
+            i+=1
+        end
+        return code_creater
     end
 
     def comp_evaluate(array)
@@ -52,15 +61,12 @@ class ComputerPlay
             end
             i+=1
         end
-        
-            
-        
+
         if @code == array
             puts "You Win"
             return true
         elsif correct_peg > 0 || colors_correct > 0
             array.push("-- Correct Pegs: #{correct_peg} and Correct Colors: #{colors_correct}")
-            #puts "#{guesses}"
             return false
         else
             puts "none right"
@@ -68,26 +74,17 @@ class ComputerPlay
     end
 end
 
-
-
-
-    
-
 def play()
-=begin
     #start the game
-    puts "what size code would you like to play (4, 6, 8, 10, or 12)?"
-    code_size = gets.chomp
+    puts "what size code would you like to play (4, 6, or 8 - 4 is standard)?"
+    code_size = gets.chomp.to_i
 
-    puts "how many turns (8, 10, or 12)?"
-    num_turns = gets.chomp
+    puts "how many turns (even number - 12 is standard)?"
+    num_turns = gets.chomp.to_i
 
-    puts "how many rounds (2, 4, or 6)?"
-    num_rounds = gets.chomp
-=end
-code_size = 4
-num_turns = 10
-num_rounds = 2
+    puts "how many rounds (even number)?"
+    num_rounds = gets.chomp.to_i
+
     board = Board.new(code_size, num_turns, num_rounds)
     comp = ComputerPlay.new(board.code_size)
     
@@ -101,9 +98,10 @@ num_rounds = 2
         end
         board.print_board
         i+=1
-        #puts board.array[0]
+        if i == num_turns 
+            puts "GAMEOVER - YOU LOSE!!"
+        end
     end
-    puts "GAMEOVER"
 end
 
 play()
