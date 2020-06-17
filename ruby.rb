@@ -7,13 +7,13 @@ end
 
 class Board
 
-    attr_reader :current_round, :array, :code_size 
+    attr_reader :array, :code_size 
     
     def initialize(code_size, num_turns, num_rounds)
         @code_size = code_size
         @num_turns = num_turns
         @num_rounds = num_rounds
-        @current_round = 1
+        @current_turn = 1
         @array = Array.new(@num_turns){Array.new(@code_size, "o")}
     end
 
@@ -23,8 +23,8 @@ class Board
 
     def human_play()
         puts "Make your guess from the following colors (Red, Green, Blue, Yellow, Purple, Orange - type first letter of each guess"
-        @array[@current_round-1] = gets.chomp.upcase.split("")
-        @current_round += 1
+        @array[@current_turn-1] = gets.chomp.upcase.split("")
+        @current_turn += 1
     end
 end
 
@@ -69,16 +69,14 @@ class ComputerPlay
         if @code == array
             puts "You Win"
             return true
-        elsif correct_peg > 0 || colors_correct > 0
+        else 
             array.push("-- Correct Pegs: #{correct_peg} and Correct Colors: #{colors_correct}")
             return false
-        else
-            puts "none right"
         end
     end
 end
 
-def play()
+def human_guess_play()
     #start the game
     puts "what size code would you like to play (4, 6, or 8 - 4 is standard)?"
     code_size = gets.chomp.to_i
@@ -108,4 +106,12 @@ def play()
     end
 end
 
-play()
+
+puts "Do you want to create the code (type '1') or guess the code (type '2')"
+user_choice = gets.chomp
+if user_choice == "1"
+    computer_guess_play()
+elsif user_choice == "2"
+    human_guess_play()
+else puts "Bad Selection, Good Bye!"
+end
