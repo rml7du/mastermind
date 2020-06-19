@@ -1,4 +1,49 @@
-require 'pry'
+module GuessFeedback
+    
+    def evaluate_both(guess)
+        colors_correct = @code_size - @code.subtract_once(guess).length
+        correct_peg = 0
+        i = 0
+        @code.each do |x|
+            if x == guess[i]
+                correct_peg +=1
+                colors_correct -=1
+            end
+            i+=1
+        end
+
+        if @code == guess
+            puts "You Win, the correct code was #{guess}"
+        else 
+            guess.push("-- Correct Pegs: #{correct_peg} and Correct Colors: #{colors_correct}")
+        end
+        return [correct_peg, colors_correct]
+    end
+
+    def evaluate_location(code_copy, guess)
+       correct_peg = 0
+        i = 0
+        code_copy.each do |x|
+            if x == guess[i]
+                correct_peg +=1
+            end
+            i+=1
+        end
+        return correct_peg
+    end
+
+    def evaluate_color(code_copy, guess)
+        colors_correct = @code_size - @code.subtract_once(guess).length
+        i = 0
+        code_copy.each do |x|
+            if x == guess[i]
+                colors_correct -=1
+            end
+            i+=1
+        end
+        return colors_correct
+    end
+end
 
 class Array
     def subtract_once(values) #used to count colors correct
@@ -9,7 +54,8 @@ end
 
 class Board
 
-    attr_reader :array, :code_size, :human_code, :current_turn
+    attr_reader :code_size, :code
+    attr_accessor :current_turn, :array
     
     def initialize(code_size, num_turns, num_rounds)
         @code_size = code_size
@@ -17,54 +63,74 @@ class Board
         @num_rounds = num_rounds
         @current_turn = 1
         @array = Array.new(@num_turns){Array.new(@code_size, "o")}
-        @human_code
+        @code
     end
 
     def print_board()
+        puts "--------------------------------------------------"
         puts @array.map { |x| x.join(' ') }
+        puts "--------------------------------------------------"
+    end
+end
+
+class Player
+    include GuessFeedback
+
+    def initialize(code_size)
+        @code_size = code_size
+        @current_turn = 1
+        @code
     end
 
-    def human_play()
+    def human_guess(array)
         puts "Make your guess from the following colors (Red, Green, Blue, Yellow, Purple, Orange - type first letter of each guess"
-        @array[@current_turn-1] = gets.chomp.upcase.split("")
+        array[@current_turn-1] = gets.chomp.upcase.split("")
+        while !valid_code(array[@current_turn-1])
+            puts "Please enter a valid guess (RGBYPO) #{@code_size} long: "
+            array[@current_turn-1] = gets.chomp.upcase.split("")
+        end
         @current_turn += 1
     end
 
     def human_code_generator()
         puts "enter the code you are using, ensure is #{@code_size} long. choose from (RGBYPO)"
-        @human_code = gets.chomp.upcase.split("")
-        puts "human code: #{@human_code}"
+        @code = gets.chomp.upcase.split("")
+        while !valid_code(@code)
+            puts "Please enter a valid guess (RGBYPO) #{@code_size} long: "
+            @code = gets.chomp.upcase.split("")
+        end
+        puts "human code: #{@code}"
+        @code
     end
     
     def human_eval(previous_guess_array)
         puts "Time to evaluate the guess, enter 0 if completely wrong, "\
         "1 if color is correct, and 2 if color/location both correct.
-        Your Code:  #{@human_code}
+        Your Code:  #{@code}
         Comp Guess: #{previous_guess_array}"
-
-
         response_array = gets.chomp.upcase.split("")
         response_array
     end
-end
 
-class GamePlay
-    
-    def initialize()
+    def valid_code(guess)
+        guess.length == @code_size && guess.all? { |val| /[RGBYPO]/.match(val) }
     end
 end
 
 class ComputerPlay
-
+    include GuessFeedback
     attr_reader :colors, :code
+    attr_accessor :num_correct, :col_correct, :guess
 
     def initialize(code_size)
         @colors = ["R", "G", "B", "Y", "P", "O"] #red, green, blue, yellow, purple, orange
-        @code = create_code(code_size)
+        @code = create_code(code_size) #computer generated code
         @code_size = code_size
-        @num_correct = 0 #for guessing code
-        @col_correct = 0 #for guessing code
+        @num_correct = nil #for guessing code
+        @col_correct = nil #for guessing code
         @current_turn = 1
+        @guess = []
+        @possible_guesses = []
     end
 
     def create_code(code_size)
@@ -77,82 +143,47 @@ class ComputerPlay
         return code_creater
     end
 
-    def comp_evaluate(array)
-        colors_correct = @code_size - @code.subtract_once(array).length
-        correct_peg = 0
-        i = 0
-        @code.each do |x|
-            if x == array[i]
-                correct_peg +=1
-                colors_correct -=1
+    def computer_guess(board)
+        #based on this methodology: https://puzzling.stackexchange.com/questions/546/clever-ways-to-solve-mastermind 
+        #where the computer creates a list of all the permutations and removes all possibilities that would not return
+        #the same result of correct locations/colors as the previous guess. 
+        if @num_correct == nil && @col_correct == nil
+            board[@current_turn-1] = [@colors[0], @colors[0], @colors[1], @colors[1]]
+            @guess = [@colors[0], @colors[0], @colors[1], @colors[1]]
+            @possible_guesses = @colors.repeated_permutation(@code_size).to_a
+        else
+            puts "else guess #{@guess}"
+            @possible_guesses.delete_if do |arr|
+                arr_copy = arr.dup
+                @num_correct != evaluate_location(arr_copy, @guess) || col_correct != evaluate_color(arr_copy, @guess)
+                #puts " arrcopy: #{arr_copy} arr number correct: #{evaluate_location(arr_copy)[0]} arr color correct: #{evaluate_location(arr_copy)[1]}"
+                #last_digit_and_place != correct_digits_and_place(arr_copy, @guess) || last_digit_only != correct_digits_only(arr_copy, @guess)
             end
-            i+=1
+            @guess = @possible_guesses.first
+            board[@current_turn-1] = @possible_guesses.first
+            puts "possible.first: #{@possible_guesses.first}"
         end
-
-        if @code == array
-            puts "You Win"
-            return true
-        else 
-            array.push("-- Correct Pegs: #{correct_peg} and Correct Colors: #{colors_correct}")
-            return false
-        end
-    end
-
-    def comp_guess(turn_array, previous_guess_array, response_array, code)
-        
-        if !response_array.include?("1") && !response_array.include?("2")
-            puts "step one of comp_guess #{response_array}"
-            i=0
-            until i == @code_size
-                previous_guess_array[i] = ("#{@colors.sample}")
-                i+=1
-            end
-        elsif @num_correct == @code_size
-            puts "Computer Wins by guessing the code #{previous_guess_array}"
-            previous_guess_array
-        elsif response_array.include?("1") || response_array.include?("2")
-            i = 0
-            binding.pry
-            response_array.each do |x|
-                if x == 0
-                    previous_guess_array[i] = @colors.sample
-                elsif x == 2
-                    puts "the value of #{i} and #{previous_guess_array[i]}"
-                    previous_guess_array[i] = previous_guess_array[i]
-                    @num_correct +=1
-                else 
-                end
-                i+=1
-            end
-        end
-        turn_array[@current_turn-1] = previous_guess_array
-        @current_turn += 1
-        
-        puts "previous guess array #{previous_guess_array}"
-        previous_guess_array
+        @current_turn +=1
+        @guess
     end
 end
 
-def human_guess_play()
-    #start the game
-    puts "what size code would you like to play (4, 6, or 8 - 4 is standard)?"
-    code_size = gets.chomp.to_i
-
-    puts "how many turns (even number - 12 is standard)?"
-    num_turns = gets.chomp.to_i
-
-    puts "how many rounds (even number)?"
-    num_rounds = gets.chomp.to_i
+def human_code_breaker(code_size, num_turns, num_rounds)
 
     board = Board.new(code_size, num_turns, num_rounds)
+    player = Player.new(code_size)
     comp = ComputerPlay.new(code_size)
 
     i = 0
 
     while i < num_turns 
-        #puts "#{comp.code} - this is the code to break"
-        board.human_play
-        if comp.comp_evaluate(board.array[i])
+        puts "turn #{i}"
+        player.human_guess(board.array)
+        response = comp.evaluate_both(board.array[i])
+        #correct_location = comp.evaluate_location(board.array[i])
+        #correct_location = comp.evaluate_location(board.array[i])
+        puts "response: #{response}, codesize: #{code_size}"
+        if response[0] == code_size
             break
         end
         board.print_board
@@ -163,51 +194,53 @@ def human_guess_play()
     end
 end
 
-def computer_guess_play()
-    puts "what size code would you like to play (4, 6, or 8 - 4 is standard)?"
-    code_size = gets.chomp.to_i
-
-    puts "how many turns (even number - 12 is standard)?"
-    num_turns = gets.chomp.to_i
-
-    puts "how many rounds (even number)?"
-    num_rounds = gets.chomp.to_i
-
+def computer_code_breaker(code_size, num_turns, num_rounds)
+    
     board = Board.new(code_size, num_turns, num_rounds)
     comp = ComputerPlay.new(code_size)
-    previous_guess_array = Array.new(code_size, "0")
-    response_array = Array.new(code_size, "0")
-    #eval_array = Array.new(code_size)
-    code = board.human_code_generator()
+    player = Player.new(code_size)
+    code = player.human_code_generator()
+    response = [nil,nil]
+    
 
     i = 0
 
     while i < num_turns 
-        previous_guess_array = comp.comp_guess(board.array[i], previous_guess_array, response_array, code)
-        board.print_board
+        puts "turn #{i}"
+        guess = comp.computer_guess(board.array)
+        puts "comp guess: #{guess}"
 
-        response_array = board.human_eval(previous_guess_array)
-        #puts "#{comp.code} - this is the code to break"
+        #board.print_board
+        puts "board.array[#{i}]: #{board.array[i]}"
+
+        comp.num_correct = player.evaluate_location(code, guess)
+        comp.col_correct = player.evaluate_color(code, guess)
+
+        puts "#{comp.num_correct} correct pegs and #{comp.col_correct} correct colors"
         
-        #if comp.comp_evaluate(board.array[i])
-        #    break
-        #end
-        
+        if comp.num_correct == code_size
+            break
+        end
         i+=1
         if i == num_turns 
             puts "GAMEOVER - COMPUTER LOSES!!"
         end
-    end
-
-    
+    end  
 end
 
-
+#set up the game
 puts "Do you want to create the code (type '1') or guess the code (type '2')"
 user_choice = gets.chomp
+puts "what size code would you like to play (4, 6, or 8 - 4 is standard)?"
+code_size = gets.chomp.to_i
+puts "how many turns (even number - 12 is standard)?"
+num_turns = gets.chomp.to_i
+#puts "how many rounds (even number)?"
+num_rounds = 1 #gets.chomp.to_i
+
 if user_choice == "1"
-    computer_guess_play()
+    computer_code_breaker(code_size, num_turns, num_rounds)
 elsif user_choice == "2"
-    human_guess_play()
+    human_code_breaker(code_size, num_turns, num_rounds)
 else puts "Bad Selection, Good Bye!"
 end
