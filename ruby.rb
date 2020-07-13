@@ -152,16 +152,12 @@ class ComputerPlay
             @guess = [@colors[0], @colors[0], @colors[1], @colors[1]]
             @possible_guesses = @colors.repeated_permutation(@code_size).to_a
         else
-            puts "else guess #{@guess}"
             @possible_guesses.delete_if do |arr|
                 arr_copy = arr.dup
-                @num_correct != evaluate_location(arr_copy, @guess) || col_correct != evaluate_color(arr_copy, @guess)
-                #puts " arrcopy: #{arr_copy} arr number correct: #{evaluate_location(arr_copy)[0]} arr color correct: #{evaluate_location(arr_copy)[1]}"
-                #last_digit_and_place != correct_digits_and_place(arr_copy, @guess) || last_digit_only != correct_digits_only(arr_copy, @guess)
+                @num_correct != evaluate_location(arr_copy, @guess) && @col_correct != evaluate_color(arr_copy, @guess)
             end
             @guess = @possible_guesses.first
-            board[@current_turn-1] = @possible_guesses.first
-            puts "possible.first: #{@possible_guesses.first}"
+            board[@current_turn-1] = @guess
         end
         @current_turn +=1
         @guess
@@ -180,8 +176,6 @@ def human_code_breaker(code_size, num_turns, num_rounds)
         puts "turn #{i}"
         player.human_guess(board.array)
         response = comp.evaluate_both(board.array[i])
-        #correct_location = comp.evaluate_location(board.array[i])
-        #correct_location = comp.evaluate_location(board.array[i])
         puts "response: #{response}, codesize: #{code_size}"
         if response[0] == code_size
             break
@@ -195,13 +189,12 @@ def human_code_breaker(code_size, num_turns, num_rounds)
 end
 
 def computer_code_breaker(code_size, num_turns, num_rounds)
-    
+
     board = Board.new(code_size, num_turns, num_rounds)
     comp = ComputerPlay.new(code_size)
     player = Player.new(code_size)
     code = player.human_code_generator()
     response = [nil,nil]
-    
 
     i = 0
 
@@ -210,15 +203,14 @@ def computer_code_breaker(code_size, num_turns, num_rounds)
         guess = comp.computer_guess(board.array)
         puts "comp guess: #{guess}"
 
-        #board.print_board
-        puts "board.array[#{i}]: #{board.array[i]}"
-
         comp.num_correct = player.evaluate_location(code, guess)
         comp.col_correct = player.evaluate_color(code, guess)
 
         puts "#{comp.num_correct} correct pegs and #{comp.col_correct} correct colors"
+        puts ""
         
         if comp.num_correct == code_size
+            puts "Computer WINS by guessing #{guess}"
             break
         end
         i+=1
